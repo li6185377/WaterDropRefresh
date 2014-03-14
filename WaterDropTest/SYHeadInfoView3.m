@@ -40,6 +40,8 @@
 -(void)initWaterView
 {
     __weak SYHeadInfoView3* wself =self;
+    //采用默认参数
+    [_waterView loadWaterView];
     [_waterView setHandleRefreshEvent:^{
         [wself setIsRefreshed:YES];
         if(wself.handleRefreshEvent)
@@ -97,6 +99,7 @@
     CGRect frame = _showView.frame;
     if(y<0)
     {
+        //头像位置调整
         if((_waterView.isRefreshing) || hasStop)
         {
             if(touch1 && touch2 == NO)
@@ -131,9 +134,11 @@
         }
     }
     if (hasStop == NO) {
+        //水滴拉伸效果
         _waterView.currentOffset = y;
     }
     
+    // 视差滚动
     UIView* bannerSuper = _img_banner.superview;
     CGRect bframe = bannerSuper.frame;
     if(y<0)

@@ -1,6 +1,6 @@
 //
 //  SYWaterDropView.m
-//
+//  Seeyou
 //
 //  Created by ljh on 14-1-1.
 //  Copyright (c) 2014年 linggan. All rights reserved.
@@ -18,52 +18,37 @@
 
 @interface SYWaterDropView()
 {
-    float _minOffset;
-    float _maxOffset;
-    float _radius;
     BOOL _animationing;
     BOOL _isRefresh;
+    float _centerX;
 }
 @property(strong,nonatomic)CAShapeLayer* doudongLayer;
 @property(strong,nonatomic)NSTimer* timer;
 @end
 
 @implementation SYWaterDropView
-
-- (id)initWithFrame:(CGRect)frame
-{
-    self = [super initWithFrame:frame];
-    if (self) {
-        [self cinit];
-    }
-    return self;
-}
--(id)initWithCoder:(NSCoder *)aDecoder
-{
-    self = [super initWithCoder:aDecoder];
-    if(self)
-    {
-        [self cinit];
-    }
-    return self;
-}
 -(BOOL)isRefreshing
 {
     return _isRefresh;
 }
--(void)cinit
+-(void)parameterInit
 {
-    _maxOffset = 60;
-    _radius = 3.5;
+    if(_waterTop == 0)
+        _waterTop = 30;
+    if(_maxDropLength == 0)
+        _maxDropLength = 60;
+    if(_radius == 0)
+        _radius = 3.5;
     
-    CGRect frame = self.frame;
-    frame.size = CGSizeMake(30, 100);  //固定 30 * 100
-    self.frame = frame;
+    _centerX = self.bounds.size.width/2;
+}
+-(void)loadWaterView
+{
+    [self parameterInit];
     
     _lineLayer = [CAShapeLayer layer];
     _lineLayer.fillColor = RGBACOLOR(222, 216, 211, 0.5).CGColor;
     [self.layer addSublayer:_lineLayer];
-    
     
     _shapeLayer = [CAShapeLayer layer];
     _shapeLayer.fillColor = RGBCOLOR(222, 216, 211).CGColor;
@@ -75,7 +60,7 @@
     _doudongLayer.fillColor = RGBCOLOR(222, 216, 211).CGColor;
     _doudongLayer.strokeColor = [[UIColor whiteColor] CGColor];
     _doudongLayer.lineWidth = 3;
-    _doudongLayer.frame = CGRectMake(15-_radius,self.bounds.size.height-20-_radius*2, _radius*2, _radius*2);
+    _doudongLayer.frame = CGRectMake(_centerX - _radius,self.bounds.size.height - _waterTop, _radius*2, _radius*2);
     _doudongLayer.path = CGPathCreateWithEllipseInRect(_doudongLayer.bounds, NULL);
     _doudongLayer.opacity = 0;
     [self.layer addSublayer:_doudongLayer];
@@ -86,26 +71,26 @@
 -(CGMutablePathRef)createPathWithOffset:(float)currentOffset
 {
     CGMutablePathRef path = CGPathCreateMutable();
-    float top = self.bounds.size.height - 20 - _radius*2 - currentOffset;
+    float top = self.bounds.size.height - _waterTop - currentOffset;
     float wdiff = currentOffset* 0.2;
     
     if(currentOffset==0)
     {
-        CGPathAddEllipseInRect(path, NULL, CGRectMake(15-_radius, top, _radius*2, _radius*2));
+        CGPathAddEllipseInRect(path, NULL, CGRectMake(_centerX-_radius, top, _radius*2, _radius*2));
     }
     else
     {
-        CGPathAddArc(path, NULL, 15,top+_radius, _radius, 0, M_PI, YES);
+        CGPathAddArc(path, NULL, _centerX,top+_radius, _radius, 0, M_PI, YES);
         float bottom = top + wdiff+_radius*2;
         if(currentOffset<10)
         {
-            CGPathAddCurveToPoint(path, NULL,15-_radius,bottom,15,bottom, 15,bottom);
-            CGPathAddCurveToPoint(path, NULL, 15,bottom,15+_radius,bottom, 15+_radius, top+_radius);
+            CGPathAddCurveToPoint(path, NULL,_centerX - _radius,bottom,_centerX,bottom, _centerX,bottom);
+            CGPathAddCurveToPoint(path, NULL, _centerX,bottom,_centerX+_radius,bottom, _centerX+_radius, top+_radius);
         }
         else
         {
-            CGPathAddCurveToPoint(path, NULL,15-_radius ,top +_radius, 15 - _radius ,bottom-2,15 , bottom);
-            CGPathAddCurveToPoint(path,NULL, 15 + _radius, bottom-2, 15+_radius,top +_radius , 15+_radius, top+_radius);
+            CGPathAddCurveToPoint(path, NULL,_centerX-_radius ,top +_radius, _centerX - _radius ,bottom-2,_centerX , bottom);
+            CGPathAddCurveToPoint(path,NULL, _centerX + _radius, bottom-2, _centerX+_radius,top +_radius , _centerX+_radius, top+_radius);
         }
     }
     CGPathCloseSubpath(path);
@@ -117,6 +102,7 @@
     if(_isRefresh)
         return;
     
+    _refreshView.layer.opacity = 0;
     [self privateSetCurrentOffset:currentOffset];
 }
 -(void)privateSetCurrentOffset:(float)currentOffset
@@ -124,10 +110,9 @@
     currentOffset = currentOffset>0?0:currentOffset;
     currentOffset = -currentOffset;
     _currentOffset =  currentOffset;
-    if(currentOffset < _maxOffset)
+    if(currentOffset < _maxDropLength)
     {
-        float wdiff = currentOffset* 0.2;
-        float top = self.bounds.size.height - 20 - _radius*2 - currentOffset;
+        float top = self.bounds.size.height - _waterTop - currentOffset;
         
         CGMutablePathRef path = [self createPathWithOffset:currentOffset];
         _shapeLayer.path = path;
@@ -135,20 +120,22 @@
         
         
         CGMutablePathRef line = CGPathCreateMutable();
-        float w = ((_maxOffset - currentOffset)/_maxOffset) + 1;
+        float w = ((_maxDropLength - currentOffset)/_maxDropLength) + 1;
+        float lt = top + _radius*2;
+        float lb = self.bounds.size.height;
+
         if(currentOffset==0)
         {
-            CGPathAddRect(line, NULL, CGRectMake(15-w/2, top + wdiff + _radius*2,w, currentOffset-wdiff+20));
+            CGPathAddRect(line, NULL, CGRectMake(_centerX-w/2, lt , 2 , lb-lt));
         }
         else{
-            float lt = top+wdiff+_radius*2;
-            float lb = currentOffset-wdiff+20 + lt;
-            CGPathMoveToPoint(line, NULL, 15- w/2,lt);
-            CGPathAddLineToPoint(line, NULL, 15 + w/2,lt);
             
-            CGPathAddCurveToPoint(line, NULL,15 + w/2,lt, 15 + w/2,lt+10, 15+1 , lb);
-            CGPathAddLineToPoint(line,  NULL, 15 - 1, lb);
-            CGPathAddCurveToPoint(line, NULL,15 - w/2,lt, 15 - w/2,lt+10,15-w/2, lt);
+            CGPathMoveToPoint(line, NULL, _centerX- w/2,lt);
+            CGPathAddLineToPoint(line, NULL, _centerX + w/2,lt);
+            
+            CGPathAddCurveToPoint(line, NULL,_centerX + w/2,lt+ 5, _centerX + w/2,lt+(lb-lt)/2 -5, _centerX+1 , lb);
+            CGPathAddLineToPoint(line,  NULL, _centerX - 1, lb);
+            CGPathAddCurveToPoint(line, NULL,_centerX- w/2,lt + 5, _centerX- w/2,lt+(lb-lt)/2 - 5,_centerX-w/2, lt);
         }
         CGPathCloseSubpath(line);
         _lineLayer.path = line;
@@ -169,7 +156,7 @@
 }
 -(void)resetWater
 {
-    [self privateSetCurrentOffset:-(_currentOffset-(_maxOffset/8))];
+    [self privateSetCurrentOffset:-(_currentOffset-(_maxDropLength/8))];
     if(_currentOffset==0)
     {
         [self.timer invalidate];
@@ -184,6 +171,7 @@
 }
 -(void)stopRefresh
 {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(startRefreshAnimation) object:nil];
     _isRefresh = NO;
     
     CABasicAnimation* anim = [CABasicAnimation animationWithKeyPath:@"opacity"];
@@ -193,7 +181,7 @@
     anim.delegate = self;
     [_refreshView.layer addAnimation:anim forKey:nil];
     _refreshView.layer.opacity = 0;
-    
+    _doudongLayer.opacity = 0;
     
     anim = [CABasicAnimation animationWithKeyPath:@"opacity"];
     anim.fromValue = @(0);
@@ -227,32 +215,25 @@
     _doudongLayer.opacity = 0;
     _shapeLayer.opacity = 0;
     
-    _refreshView.center = CGPointMake(15,self.bounds.size.height - 20 - _radius);
+    _refreshView.center = CGPointMake(_centerX, _doudongLayer.frame.origin.y + _doudongLayer.frame.size.height/2);
     [_refreshView.layer removeAllAnimations];
     _refreshView.layer.opacity = 1;
     
+    CABasicAnimation* alpha = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    alpha.duration = 0.2;
+    alpha.fromValue = @0.5;
+    alpha.toValue = @1;
+    
     CABasicAnimation* animation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
     animation.duration = 1;
+    animation.beginTime = 0.1;
     animation.fromValue = @0;
     animation.toValue = @(M_PI*2);
     animation.repeatCount = INT_MAX;
     
+    [_refreshView.layer addAnimation:alpha forKey:nil];
     [_refreshView.layer addAnimation:animation forKey:@"rotation"];
 }
-
--(CGPoint)scaleWithIndex:(int)i
-{
-    float xvalue = 1 - (0.4f- i*0.1f)*(2 * i%2 - 1);
-    float yvalue = 1 + (0.4f- i*0.1f)*(2 * i%2 - 1);
-    
-    if(i%2==0){
-        return CGPointMake(yvalue, xvalue);
-    }
-    else{
-        return CGPointMake(xvalue, yvalue);
-    }
-}
-
 NS_INLINE CATransform3D CATransform3DMakeRotationScale(CGFloat angle,CGFloat sx, CGFloat sy,
                                                        CGFloat sz)
 {
@@ -295,10 +276,7 @@ NS_INLINE CATransform3D CATransform3DMakeRotationScale(CGFloat angle,CGFloat sx,
     [_doudongLayer addAnimation:animation forKey:nil];
     
     __weak SYWaterDropView* wself = self;
-    
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kDuration * NSEC_PER_SEC));
-    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        wself.doudongLayer.opacity = 0;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((kDuration-0.1f) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [wself startRefreshAnimation];
     });
 }
