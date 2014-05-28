@@ -3,4 +3,4 @@ WaterDropRefresh
 
 path refresh effect
 
-![](https://github.com/li6185377/WaterDropRefresh/raw/master/Untitled.gif)
+![](http://code4app.qiniudn.com/photo/52cfbdbfcb7e8440638b5a56_1.gif)
